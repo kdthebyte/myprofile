@@ -27,6 +27,8 @@ h2{font-size:clamp(54px,10vw,128px);color:var(--r);letter-spacing:.02em;margin:0
 /* worn, uneven strokes */
 .btn,.chips span,.stat,.main,.shot,.fig,.it,.sl{position:relative}
 .btn::before,.chips span::before,.stat::before,.main::before,.shot::before,.fig::before,.it::before,.sl::before{content:"";position:absolute;inset:0;border:var(--bw,3px) solid var(--bc,var(--y));border-radius:inherit;pointer-events:none;filter:url(#worn);z-index:3}
+/* moving tiles get a plain border (the SVG filter is too heavy on animated items and made tiles drop out) */
+.it::before{filter:none}
 /* nav */
 .nav{position:sticky;top:0;z-index:20;background:rgba(11,10,9,.82);backdrop-filter:blur(8px)}
 .nav::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:3px;background:var(--y);opacity:.7;filter:url(#worn)}
@@ -111,22 +113,24 @@ h2{font-size:clamp(54px,10vw,128px);color:var(--r);letter-spacing:.02em;margin:0
 .bp{position:absolute;inset:0;display:grid;place-items:center}
 .bp .ic{width:78px;height:78px;background:rgba(0,0,0,.55);border:1px solid var(--y);border-radius:50%;padding:22px;fill:var(--y);stroke:none;animation:none}
 .tag{position:absolute;left:18px;bottom:14px;z-index:4;color:var(--y);font:18px Anton;letter-spacing:.12em;text-transform:uppercase;text-shadow:0 2px 8px #000}
-.shot{--ar:1.6;padding:0;border:0;background:#141210;box-shadow:0 14px 30px rgba(0,0,0,.7);overflow:hidden;height:120px;width:calc(120px*var(--ar));max-width:100%;--bw:3px;--bc:#e9e1cf}
-.shot img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .6s}.shot:hover img{transform:scale(1.05)}
 .pcase{position:relative;margin:110px 0}
 .pcase::before{content:"";position:absolute;inset:-8% -5%;background:radial-gradient(ellipse at 30% 40%,rgba(221,165,32,.14),transparent 62%);z-index:-1;pointer-events:none}
 .phead{display:flex;align-items:baseline;gap:18px;margin-bottom:24px}
 .pno{font:clamp(70px,11vw,150px) Anton;line-height:.8;-webkit-text-stroke:2px var(--r);color:transparent;filter:url(#worn)}
 .phead h3{font:clamp(26px,3.4vw,44px) Anton;letter-spacing:.06em;text-transform:uppercase;color:var(--y);font-weight:400}
-.pgrid{display:grid;grid-template-columns:1.35fr 1fr;gap:44px;align-items:center}
-.pcase.flip .pgrid{grid-template-columns:1fr 1.35fr}.pcase.flip .pmain{order:2}
-.pmain{width:min(100%,calc(var(--ar)*620px))}
-.pc{min-width:0}
-.stk{display:grid;min-height:200px}
-.stk .sl{grid-area:1/1;align-self:center;justify-self:center;width:max-content;max-width:100%;padding:0;border:0;background:none;overflow:hidden;opacity:0;transform:translateX(8%) scale(.96);transition:opacity .9s,transform 1.1s cubic-bezier(.2,.7,.2,1);pointer-events:none;--bw:3px;--bc:#e9e1cf;box-shadow:0 22px 50px rgba(0,0,0,.75)}
-.stk .sl.on{opacity:1;transform:none;pointer-events:auto}.stk .sl.past{transform:translateX(-8%) scale(.96)}
-.sl img{display:block;max-width:100%;max-height:min(440px,60vh);width:auto;height:auto}
-.sl.on img{animation:drift 7s ease-out both}
+/* video column and screenshot column are separate tracks, so they can never overlap */
+.pgrid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:44px;align-items:center}
+.pcase.flip .pgrid{grid-template-columns:minmax(0,1fr) minmax(0,1.35fr)}.pcase.flip .pmain{order:2}
+.pmain{width:min(100%,calc(var(--ar)*620px));min-width:0}
+.pc{min-width:0;--sh:clamp(280px,40vw,420px)}
+/* sliding screenshots (4+): fixed-height window, clipped, one frame at a time */
+.vp{overflow:hidden;height:var(--sh)}
+.tr{display:flex;height:100%;transition:transform 1s cubic-bezier(.2,.7,.2,1)}
+.sld{flex:0 0 100%;min-width:0;height:100%;padding:12px;display:grid;grid-template-columns:minmax(0,1fr);place-items:center}
+.sld.bad{display:none}
+.sl{--ar:1.6;width:min(100%,calc((var(--sh) - 24px)*var(--ar)));aspect-ratio:var(--ar);padding:0;border:0;background:#141210;overflow:hidden;box-shadow:0 10px 26px rgba(0,0,0,.7);--bw:3px;--bc:#e9e1cf}
+.sl img{display:block;width:100%;height:100%;object-fit:cover}
+.sld.on .sl img{animation:drift 7s ease-out both}
 @keyframes drift{from{transform:scale(1.07)}}
 .seg{display:flex;gap:6px;margin-top:22px}
 .seg button{flex:1;height:14px;padding:0;border:0;background:none;display:flex;align-items:center}
@@ -138,26 +142,39 @@ h2{font-size:clamp(54px,10vw,128px);color:var(--r);letter-spacing:.02em;margin:0
 @keyframes fill{to{transform:scaleX(1)}}
 .cnt{display:flex;justify-content:space-between;margin-top:8px;font:500 12px ui-monospace,Menlo,Consolas,monospace;letter-spacing:.12em;color:var(--mute);text-transform:uppercase}
 .cnt b{color:var(--y);font-weight:500}
-.h2s{font-size:clamp(44px,8vw,100px)}
-.sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:64px 40px;margin-top:40px}
-.scard .main{width:100%}
+/* few screenshots (3 or fewer): they fade in one after another, with a slow zoom */
 .sshots{display:flex;gap:14px;margin-top:20px;flex-wrap:wrap}
+.pc .sshots{margin-top:0}
+.shot{--ar:1.6;--shh:120px;padding:0;border:0;background:#141210;box-shadow:0 14px 30px rgba(0,0,0,.7);overflow:hidden;height:var(--shh);width:calc(var(--shh)*var(--ar));max-width:100%;--bw:3px;--bc:#e9e1cf}
+.big .shot{--shh:200px}
+.shot img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .6s}.shot:hover img{transform:scale(1.05)}
+.js .fx .shot{opacity:0;transform:translateY(16px) scale(.95);transition:opacity .9s ease,transform 1s cubic-bezier(.2,.7,.2,1);transition-delay:calc(var(--k)*220ms + 350ms)}
+.js .fx.in .shot{opacity:1;transform:none}
+.fx.in .shot img{animation:drift 7s ease-out both;animation-delay:calc(var(--k)*220ms + 350ms)}
+.h2s{font-size:clamp(44px,8vw,100px)}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:64px 40px;margin-top:40px}
+.scard{min-width:0}
+.scard .main{width:100%}
 /* galleries (posters, photos) */
-.poster{background:linear-gradient(#150907,#0b0a09)}
+.poster{background:linear-gradient(#0b0a09,#150907 35%,#0b0a09)}
 .gal{display:flex;flex-wrap:wrap;gap:28px;align-items:center;justify-content:center}
 .fig{--hh:var(--h,300px);height:var(--hh);width:calc(var(--hh)*var(--ar,.8));max-width:100%;padding:0;border:0;background:#161311;overflow:hidden;box-shadow:0 20px 44px rgba(0,0,0,.7);--bw:3px;--bc:#e9e1cf}
 .fig img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .6s}.fig:hover img{transform:scale(1.05)}
-/* looping galleries: every tile keeps its own shape */
+/* tiles */
+.it{--ar:1.778;--hh:var(--h,220px);flex:none;height:var(--hh);width:calc(var(--hh)*var(--ar));padding:0;border:0;overflow:hidden;background:#161311;border-radius:4px;box-shadow:0 18px 40px rgba(0,0,0,.7);--bw:3px;--bc:#e9e1cf}
+.it img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .5s}
+.it:hover img{transform:scale(1.06)}
+.it .ic{position:absolute;inset:0;margin:auto;width:34px;height:34px;fill:var(--y);stroke:none;background:rgba(0,0,0,.55);border-radius:50%;padding:9px;animation:none;opacity:.9;z-index:2}
+/* Through my lens: rows glide sideways as you scroll, so every photo passes through the screen */
+.lrow{overflow:hidden;padding:18px 0 26px;-webkit-mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent);mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent)}
+.ltrk{display:flex;align-items:center;gap:26px;padding:0 28px;width:max-content;will-change:transform}
+/* looping galleries (More edits) */
 .lp{overflow:hidden;padding:16px 0 22px;-webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent)}
 .lp+.lp{margin-top:8px}
 .lp .trk{display:flex;align-items:center;gap:26px;padding-right:26px;width:max-content;animation:loop var(--dur,90s) linear infinite}
 .lp.rev .trk{animation-direction:reverse}
 .lp:hover .trk,.lp:focus-within .trk{animation-play-state:paused}
 @keyframes loop{to{transform:translateX(-50%)}}
-.it{--ar:1.778;--hh:var(--h,220px);flex:none;height:var(--hh);width:calc(var(--hh)*var(--ar));padding:0;border:0;overflow:hidden;background:#161311;border-radius:4px;box-shadow:0 18px 40px rgba(0,0,0,.7);--bw:3px;--bc:#e9e1cf}
-.it img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .5s}
-.it:hover img{transform:scale(1.06)}
-.it .ic{position:absolute;inset:0;margin:auto;width:34px;height:34px;fill:var(--y);stroke:none;background:rgba(0,0,0,.55);border-radius:50%;padding:9px;animation:none;opacity:.9;z-index:2}
 /* contact */
 .hi{text-align:center;padding:130px 0;background:radial-gradient(ellipse at 50% 110%,#5b160a 0,#0b0a09 62%)}
 .hi h2{font-size:clamp(70px,16vw,220px);margin:0;color:var(--w)}
@@ -169,17 +186,20 @@ body::before{content:"";position:fixed;inset:0;z-index:39;pointer-events:none;ba
 body::after{content:"";position:fixed;inset:-10%;z-index:40;pointer-events:none;opacity:.08;animation:grain .9s steps(1) infinite;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .7 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
 @keyframes grain{0%{transform:translate(0,0)}20%{transform:translate(-3%,2%)}40%{transform:translate(2%,-3%)}60%{transform:translate(-2%,-1%)}80%{transform:translate(3%,3%)}}
 #dust{position:fixed;inset:0;width:100%;height:100%;z-index:38;pointer-events:none}
-/* profile zoom, paper + glitch title */
+/* profile zoom, paper strip + soft glitch title */
 .cover img{animation:kb 22s ease-in-out infinite alternate}
 @keyframes kb{to{transform:scale(1.13) translate(-2%,1.5%)}}
 .role mark::before{filter:url(#rough) drop-shadow(3px 4px 0 rgba(0,0,0,.55))}
-.hero.ready .role mark{animation:tear .7s steps(7) .5s both,paper 1.2s steps(1) 1.2s infinite}
+/* each label is a torn paper strip: it tears in from the left, then barely moves (mild paper wiggle) */
+.role mark{--rot:-1.2deg;rotate:var(--rot)}
+.role mark+.amp+mark{--rot:1deg}
+.hero.ready .role mark{animation:tear .7s steps(7) .5s both,paper 2.8s steps(1) 1.2s infinite}
 .hero.ready .role mark+.amp+mark{animation-delay:.8s,1.5s}
 @keyframes tear{from{clip-path:inset(-30% 100% -30% -10%)}to{clip-path:inset(-30% -10% -30% -10%)}}
-@keyframes paper{0%{transform:rotate(-1.4deg) translate(0,0)}25%{transform:rotate(.9deg) translate(1px,-1px)}50%{transform:rotate(-.5deg) translate(-1px,1px)}75%{transform:rotate(1.2deg) translate(1px,1px)}}
-.role mark::after{content:attr(data-t);position:absolute;inset:0;padding:inherit;color:#0b0a09;text-shadow:3px 0 var(--r),-3px 0 #00d5ff;opacity:0;pointer-events:none;animation:glitch 5s steps(1) infinite}
-.role mark+.amp+mark::after{animation-delay:-2.4s}
-@keyframes glitch{0%,89%{opacity:0}90%{opacity:1;clip-path:inset(10% 0 62% 0);transform:translateX(-4px)}92%{opacity:1;clip-path:inset(58% 0 8% 0);transform:translateX(5px)}94%{opacity:1;clip-path:inset(30% 0 38% 0);transform:translateX(-3px)}96%{opacity:1;clip-path:inset(0 0 72% 0);transform:translateX(4px)}98%,100%{opacity:0}}
+@keyframes paper{0%{rotate:calc(var(--rot) - .35deg);translate:0 0}25%{rotate:calc(var(--rot) + .25deg);translate:.6px -.6px}50%{rotate:calc(var(--rot) - .1deg);translate:-.6px .4px}75%{rotate:calc(var(--rot) + .4deg);translate:.4px .6px}}
+.role mark::after{content:attr(data-t);position:absolute;inset:0;padding:inherit;color:#0b0a09;text-shadow:2px 0 var(--r),-2px 0 #00d5ff;opacity:0;pointer-events:none;animation:glitch 9s steps(1) infinite}
+.role mark+.amp+mark::after{animation-delay:-4.4s}
+@keyframes glitch{0%,93%{opacity:0}94%{opacity:1;clip-path:inset(10% 0 62% 0);transform:translateX(-2px)}96%{opacity:1;clip-path:inset(58% 0 8% 0);transform:translateX(2px)}98%,100%{opacity:0}}
 /* editing timeline dock */
 body{padding-bottom:64px}
 .tcd{font:500 13px ui-monospace,Menlo,Consolas,monospace;color:var(--y);border:1px solid rgba(221,165,32,.5);padding:4px 10px;letter-spacing:.06em}
@@ -203,10 +223,10 @@ dialog::backdrop{background:rgba(0,0,0,.94)}
 .frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 .modal>img{max-width:94vw;max-height:88vh;border:1px solid rgba(221,165,32,.5)}
 .close{position:absolute;top:16px;right:20px;z-index:2;background:var(--y);color:#000;border:0;padding:9px 22px;font:700 13px "Space Grotesk";letter-spacing:.16em;text-transform:uppercase}
-@media(max-width:820px){.ab,.case,.case.flip{grid-template-columns:1fr}.case.flip .main{order:0}.nav nav a:not(:last-child){display:none}.shots{grid-template-columns:1fr 1fr}.shot{width:100%}section{padding:70px 0}
+@media(max-width:820px){.ab{grid-template-columns:1fr}.nav nav a:not(:last-child){display:none}section{padding:70px 0}
 .cover{width:100%;-webkit-mask-image:none;mask-image:none}.hero.ready .cover{opacity:.5}.fig{--hh:calc(var(--h,300px)*.62)}.it{--hh:calc(var(--h,220px)*.68)}
-.pgrid,.pcase.flip .pgrid{grid-template-columns:1fr}.pcase.flip .pmain{order:0}.dl{display:none}.cr a{padding:0 5px;font-size:9px}}
-@media(prefers-reduced-motion:reduce){*,::before,::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.js .rv{opacity:1;transform:none}.js [data-split]:not(.in) .ch{opacity:1}}
+.pgrid,.pcase.flip .pgrid{grid-template-columns:minmax(0,1fr)}.pcase.flip .pmain{order:0}.pc{--sh:clamp(260px,72vw,380px)}.big .shot{--shh:150px}.dl{display:none}.cr a{padding:0 5px;font-size:9px}}
+@media(prefers-reduced-motion:reduce){*,::before,::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.js .rv{opacity:1;transform:none}.js [data-split]:not(.in) .ch{opacity:1}.lrow{overflow-x:auto}}
 </style>
 </head>
 <body>
@@ -220,7 +240,7 @@ dialog::backdrop{background:rgba(0,0,0,.94)}
 
 <header class="nav"><div class="wrap">
   <a class="logo" href="#home">Pradeeb</a>
-  <nav><a href="#top">Top picks</a><a href="#posters">Posters</a><a href="#lens">Photos</a><a href="#more">More</a><a href="#hi">Say hi</a></nav><div class="tcd" id="tc" aria-hidden="true">00:00:00:00</div>
+  <nav><a href="#top">Top picks</a><a href="#lens">Photos</a><a href="#posters">Posters</a><a href="#more">More</a><a href="#hi">Say hi</a></nav><div class="tcd" id="tc" aria-hidden="true">00:00:00:00</div>
 </div></header>
 
 <main id="home">
@@ -269,20 +289,21 @@ dialog::backdrop{background:rgba(0,0,0,.94)}
   <div class="sgrid" id="secondary"></div>
 </div></section>
 
+<section id="lens">
+  <div class="wrap">
+    <span class="note rv">shot &amp; edited by me</span>
+    <h2 data-split class="rv">Through my lens</h2>
+    <p class="sub rv">Keep scrolling and the frames glide across. Tap one to enlarge it.</p>
+  </div>
+  <div id="lensLoop"></div>
+</section>
+
 <section class="poster" id="posters"><div class="wrap">
   <div class="render" data-label="Poster lab · Export" data-for="#posterTitle"></div>
   <span class="note rv">fan-made posters + more</span>
   <h2 id="posterTitle" data-split>Poster lab</h2>
   <div class="gal" id="posterGal"></div>
 </div></section>
-
-<section id="lens">
-  <div class="wrap">
-    <span class="note rv">shot &amp; edited by me</span>
-    <h2 data-split class="rv">Through my lens</h2>
-  </div>
-  <div id="lensLoop"></div>
-</section>
 
 <section id="more">
   <div class="wrap">
@@ -304,7 +325,7 @@ dialog::backdrop{background:rgba(0,0,0,.94)}
 
 <nav class="dock" aria-label="Page sections"><div class="dl"><span>V1 &nbsp;A1</span><span>TIMELINE</span></div>
   <div class="dt" id="dt"><div class="rl"></div>
-    <div class="cr" id="cr"><a href="#hero">Intro</a><a href="#about">About</a><a href="#top">Top picks</a><a href="#top2">More top</a><a href="#posters">Posters</a><a href="#lens">Photos</a><a href="#more">More</a><a href="#hi">Hi</a></div>
+    <div class="cr" id="cr"><a href="#hero">Intro</a><a href="#about">About</a><a href="#top">Top picks</a><a href="#top2">More top</a><a href="#lens">Photos</a><a href="#posters">Posters</a><a href="#more">More</a><a href="#hi">Hi</a></div>
     <div class="ph" id="ph"></div></div></nav>
 
 <dialog id="dlg" aria-label="Viewer"><div class="modal" id="modal"></div><button class="close" id="close">Close</button></dialog>
@@ -312,7 +333,9 @@ dialog::backdrop{background:rgba(0,0,0,.94)}
 <script>
 /* ===== EDIT YOUR CONTENT HERE =====
    Drive links: use the ID from drive.google.com/file/d/ID/view  (share as "Anyone with the link can view")
-   TOP: [title, videoID, thumbnailID, [screenshotID, screenshotID]]  */
+   TOP: [title, videoID, thumbnailID, [screenshotID, screenshotID]]
+   Screenshots: SLIDE_MIN or more = they slide; fewer = they fade in.  */
+const SLIDE_MIN=4;
 const ME="1qecgW7wm_byPovhcFitoy0n9jNpDcRTF";
 const PRIMARY=[["Event highlight","159td_99zGW_hHiFBDM9x6-9NH8tmNG9c","1C8Q1wbre3tsppyCT7SuOjWj7y_-0otTZ",["1Z0_JQTPqiwmjhsMEqNUuDbvHYke-g9jE","1FF_aecwqSXsNaOQ2s5Xex31QJvrKRC5r","1nQ9xjuIBkiIdglwDmcjvj4tUSs1EZzYB","1UcRnYpSiEbgUBZuGq-rondCAqudPWOYd","15Pyh-HxA9K113Kso71Ur2hI-MVj0Xvmb"]],["Dynamic edit","1eR97KiJqW70Nq-QkzCS305uuRJXaj2zZ","1nR2i9bytKULwsVfrXLDgB5rMT1pbMtWY",["1bQiGrQCXMOBcm5IrKt04HqhGCWXyzFLQ","1MCc7j8viQAqn35TagDkmzCiwVQAeGag9","1klVXlMJr5h3U43Hfr0B-GcM1wnkErYpk","1QiXga6_fdTGKWEJiO6-ZEn64W9ecV4JH"]],["Featured 03","1dJN5oiTw3zCc8tjI3RCytM8x5p_1IgKt","1toUJOPZPvwretR54WJrp5lG8ElzxsLgn",["1a_pEw5SrA8FfjAbT0LODv-qb7jFLNBYP","1DdCDEPCJNu5MPt0kVEicBjcc-NgHebbz","19avM-E_ZDzFUVTp5U9gXG3GIErKJkPtN","1dMRQ7x9GVkvYwUZGkb_BcFS94NiZV6eh"]],["Featured 04","1JhD1CyfCKur2oHS_IBO-ZFfZ64ZYF6-i","1nAwa1CxuD0YaKVrA-9qf98ORwdGradMc",["17wqPpN7yhQXnZeEwRDI8eWlk9PS9ImOK","1XtduGpRRKTHdLr7P8vV9EmhdOEMg0LDj","1Oa3cMVcM2UuVbt_bydboPE_GzH9N8zXQ","1tJan5Bs1dR1LM-Kwy6SlXB23hwZvWmI4","1byTlcu4VSXImwnQwNTISov4bXEq0J8Ad"]]];
 /* secondary top picks: [title, videoID, thumbnailID, [screenshotID, screenshotID]] */
@@ -328,7 +351,6 @@ const $=s=>document.querySelector(s);
 const g=(id,w=900)=>`https://drive.google.com/thumbnail?id=${id}&sz=w${w}`;
 const yt=id=>`https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
 const ico=n=>`<svg class="ic"><use href="#${n}"/></svg>`;
-const hide="onerror=\"this.style.display='none'\"";
 const reduce=matchMedia("(prefers-reduced-motion:reduce)").matches;
 const rng=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
 
@@ -336,6 +358,20 @@ const rng=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.i
 const fit=i=>{if(i.tagName!=="IMG"||!i.naturalHeight)return;const p=i.closest("[data-ar]");if(p)p.style.setProperty("--ar",(i.naturalWidth/i.naturalHeight).toFixed(3))};
 document.addEventListener("load",e=>fit(e.target),true);
 const pad=n=>String(n).padStart(2,"0");
+
+/* Drive image helper: if a thumbnail fails (rate limit, hiccup) it retries, then tries two other Drive URLs, and only then gives up */
+const im=(id,w,alt,on,eager)=>`<img loading="${eager?"eager":"lazy"}" decoding="async" src="${g(id,w)}" alt="${alt}" data-fid="${id}" data-w="${w}" data-on="${on}">`;
+const alts=[(i,w)=>g(i,w),(i,w)=>`https://lh3.googleusercontent.com/d/${i}=w${w}`,(i,w)=>`https://drive.google.com/uc?export=view&id=${i}`];
+function bad(img){
+  const id=img.dataset.fid,w=img.dataset.w,n=+(img.dataset.n||0);
+  if(id&&n<alts.length){img.dataset.n=n+1;setTimeout(()=>{img.src=alts[n](id,w)},n?0:1200);return}
+  const on=img.dataset.on,b=img.closest("button");
+  if(on==="it"&&b){document.querySelectorAll(`.it[data-m="${b.dataset.m}"][data-id="${b.dataset.id}"]`).forEach(e=>e.remove());lensMove()}
+  else if(on==="fig"&&b)b.remove();
+  else if(on==="shot"&&b)b.style.display="none";
+  else if(on==="sl"){const s=img.closest(".sld"),pc=img.closest(".pc");s.classList.add("bad");pc._go&&pc._go(pc._cur)}
+  else img.style.display="none"}
+document.addEventListener("error",e=>{if(e.target.tagName==="IMG"&&e.target.dataset.on)bad(e.target)},true);
 
 /* cover photo */
 $("#me").innerHTML=`<img src="${g(ME,2000)}" alt="Pradeeb" onerror="this.remove()">`;
@@ -359,52 +395,70 @@ runRender($("#r0"),reduce?1:2800,()=>{hero.classList.add("ready");$("#heroTitle"
 const rio=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){rio.unobserve(e.target);runRender(e.target,reduce?1:1800,()=>$(e.target.dataset.for).classList.add("in"))}}),{threshold:.6});
 document.querySelectorAll(".render[data-for]").forEach(el=>rio.observe(el));
 
-/* primary top picks: big thumbnail + sliding / fading frames */
-$("#primary").innerHTML=PRIMARY.map(([t,v,th,sh],i)=>`
-<article class="pcase${i%2?" flip":""} rv">
-  <div class="phead"><span class="pno">${pad(i+1)}</span><h3>${t}</h3></div>
-  <div class="pgrid">
-    <button class="main pmain" data-ar data-m="d" data-id="${v}" aria-label="Play ${t}"><img loading="lazy" src="${g(th,1600)}" alt="${t} thumbnail" ${hide}><span class="bp">${ico("play")}</span><span class="tag">${t}</span></button>
-    <div class="pc">
-      <div class="stk">${sh.map((s,k)=>`<button class="sl${k?"":" on"}" data-ar data-m="i" data-id="${s}" aria-label="Open frame ${k+1}"><img loading="lazy" src="${g(s,1000)}" alt="Frame ${k+1} from ${t}" onerror="this.closest('.sl').classList.add('bad');this.closest('.sl').style.display='none'"></button>`).join("")}</div>
+/* screenshots: SLIDE_MIN+ -> sliding strip, fewer -> fade in */
+const shots=(sh,t,cls)=>`<div class="sshots${cls?" "+cls:""}">${sh.map((s,k)=>`<button class="shot" style="--k:${k}" data-ar data-m="i" data-id="${s}" aria-label="Open screenshot ${k+1}">${im(s,700,`Screenshot ${k+1} from ${t}`,"shot")}</button>`).join("")}</div>`;
+const slider=(sh,t)=>`<div class="pc" data-slide>
+      <div class="vp"><div class="tr">${sh.map((s,k)=>`<div class="sld${k?"":" on"}"><button class="sl" data-ar data-m="i" data-id="${s}" aria-label="Open frame ${k+1}">${im(s,1000,`Frame ${k+1} from ${t}`,"sl",1)}</button></div>`).join("")}</div></div>
       <div class="seg">${sh.map(()=>`<button aria-label="Show frame"><i></i></button>`).join("")}</div>
       <div class="cnt"><span>Frames from the edit</span><span><b>01</b> / ${pad(sh.length)}</span></div>
-    </div>
-  </div>
-</article>`).join("");
-/* secondary top picks */
-$("#secondary").innerHTML=SECONDARY.map(([t,v,th,sh])=>`
-<article class="scard rv">
-  <button class="main" data-ar data-m="d" data-id="${v}" aria-label="Play ${t}"><img loading="lazy" src="${g(th,1200)}" alt="${t} thumbnail" ${hide}><span class="bp">${ico("play")}</span><span class="tag">${t}</span></button>
-  <div class="sshots">${sh.map(s=>`<button class="shot" data-ar data-m="i" data-id="${s}" aria-label="Open screenshot"><img loading="lazy" src="${g(s,600)}" alt="Screenshot from ${t}" ${hide}></button>`).join("")}</div>
-</article>`).join("");
+    </div>`;
 
-/* frame carousel: slides, fades and auto-advances with a progress bar */
-document.querySelectorAll(".pc").forEach(pc=>{
-  const sl=[...pc.querySelectorAll(".sl")],sg=[...pc.querySelectorAll(".seg button")],cn=pc.querySelector(".cnt b");let cur=0;
-  const go=n=>{let k=0;do{n=(n+sl.length)%sl.length;k++}while(sl[n].classList.contains("bad")&&k<=sl.length);cur=n;
-    sl.forEach((s,j)=>{s.classList.toggle("on",j===cur);s.classList.toggle("past",j<cur)});
+/* primary top picks: video on one side, screenshots on the other (separate grid columns) */
+$("#primary").innerHTML=PRIMARY.map(([t,v,th,sh],i)=>{const sl=sh.length>=SLIDE_MIN;return `
+<article class="pcase${i%2?" flip":""}${sl?"":" fx"} rv">
+  <div class="phead"><span class="pno">${pad(i+1)}</span><h3>${t}</h3></div>
+  <div class="pgrid">
+    <button class="main pmain" data-ar data-m="d" data-id="${v}" aria-label="Play ${t}">${im(th,1600,`${t} thumbnail`,"hide")}<span class="bp">${ico("play")}</span><span class="tag">${t}</span></button>
+    ${sl?slider(sh,t):`<div class="pc">${shots(sh,t,"big")}</div>`}
+  </div>
+</article>`}).join("");
+/* secondary top picks */
+$("#secondary").innerHTML=SECONDARY.map(([t,v,th,sh])=>{const sl=sh.length>=SLIDE_MIN;return `
+<article class="scard${sl?"":" fx"} rv">
+  <button class="main" data-ar data-m="d" data-id="${v}" aria-label="Play ${t}">${im(th,1200,`${t} thumbnail`,"hide")}<span class="bp">${ico("play")}</span><span class="tag">${t}</span></button>
+  ${sl?slider(sh,t):shots(sh,t)}
+</article>`}).join("");
+
+/* frame slider: slides sideways inside its own clipped window, auto-advances with a progress bar */
+document.querySelectorAll(".pc[data-slide]").forEach(pc=>{
+  const sl=[...pc.querySelectorAll(".sld")],sg=[...pc.querySelectorAll(".seg button")],cn=pc.querySelector(".cnt b"),tr=pc.querySelector(".tr");let cur=0;
+  const go=n=>{let k=0;n=(n+sl.length)%sl.length;while(sl[n].classList.contains("bad")&&k++<sl.length)n=(n+1)%sl.length;cur=pc._cur=n;
+    tr.style.transform=`translateX(${-sl.slice(0,cur).filter(s=>!s.classList.contains("bad")).length*100}%)`;
+    sl.forEach((s,j)=>s.classList.toggle("on",j===cur));
     sg.forEach((b,j)=>{b.classList.toggle("done",j<cur);b.classList.remove("on")});void pc.offsetWidth;sg[cur].classList.add("on");cn.textContent=pad(cur+1)};
-  sg.forEach((b,j)=>b.onclick=()=>go(j));
+  pc._go=go;sg.forEach((b,j)=>b.onclick=()=>go(j));
   pc.addEventListener("animationend",e=>{if(e.animationName==="fill")go(cur+1)});
   go(0);
 });
 const liveIO=new IntersectionObserver(es=>es.forEach(e=>e.target.classList.toggle("live",e.isIntersecting)),{threshold:.35});
-document.querySelectorAll(".pc").forEach(pc=>liveIO.observe(pc));
+document.querySelectorAll(".pc[data-slide]").forEach(pc=>liveIO.observe(pc));
 
 /* posters: natural shape, random size */
 const gallery=(el,ids,seed,min,span,alt)=>{const H=rng(seed);
-  el.innerHTML=ids.map(id=>`<button class="fig rv" style="--h:${Math.round(min+H()*span)}px;--t:${(H()*2-1).toFixed(1)}deg" data-ar data-m="i" data-id="${id}" aria-label="Open image"><img loading="lazy" src="${g(id,900)}" alt="${alt}" onerror="this.closest('.fig').remove()"></button>`).join("")};
+  el.innerHTML=ids.map(id=>`<button class="fig rv" style="--h:${Math.round(min+H()*span)}px;--t:${(H()*2-1).toFixed(1)}deg" data-ar data-m="i" data-id="${id}" aria-label="Open image">${im(id,900,alt,"fig")}</button>`).join("")};
 gallery($("#posterGal"),POSTERS,5,240,190,"Poster design");
 
-/* looping galleries (photos + more edits): each tile follows its own shape */
+/* Through my lens: 1 row (or 2 rows when there are 6+ photos), each photo once. The rows slide sideways with the scroll. */
+const photoTile=(id,h)=>`<button class="it" style="--h:${h}px" data-ar data-m="i" data-id="${id}" aria-label="Open photo">${im(id,900,"Photo shot and edited by Pradeeb","it",1)}</button>`;
+const HL=rng(8);
+const lensRows=PHOTOS.length>=6?[PHOTOS.filter((_,i)=>i%2===0),PHOTOS.filter((_,i)=>i%2===1)]:[PHOTOS];
+$("#lensLoop").innerHTML=lensRows.map((r,k)=>`<div class="lrow" data-dir="${k%2?1:-1}"><div class="ltrk">${r.map(id=>photoTile(id,Math.round(230+HL()*90))).join("")}</div></div>`).join("");
+let lensBusy=false;
+function lensMove(){lensBusy=false;if(reduce)return;const vh=innerHeight;
+  document.querySelectorAll(".lrow").forEach(r=>{const t=r.firstElementChild,ov=Math.max(0,t.scrollWidth-r.clientWidth),b=r.getBoundingClientRect();
+    let p=(vh-b.top)/(vh+b.height);p=Math.min(1,Math.max(0,(p-.15)/.7));
+    t.style.transform=`translate3d(${(r.dataset.dir==="1"?-ov*(1-p):-ov*p).toFixed(1)}px,0,0)`})}
+const lensReq=()=>{if(!lensBusy){lensBusy=true;requestAnimationFrame(lensMove)}};
+addEventListener("scroll",lensReq,{passive:true});addEventListener("resize",lensReq);
+const lro=new ResizeObserver(lensReq);document.querySelectorAll(".ltrk").forEach(t=>lro.observe(t));
+lensMove();
+
+/* More edits: looping rows, each tile follows its own shape */
 const loopRow=(tiles,rev,dur)=>{const a=tiles.join("");
   return `<div class="lp${rev?" rev":""}"><div class="trk" style="--dur:${dur}s">${a}${a.replace(/<button /g,'<button tabindex="-1" aria-hidden="true" ')}</div></div>`};
-const photoTile=(id,h)=>`<button class="it" style="--h:${h}px" data-ar data-m="i" data-id="${id}" aria-label="Open photo"><img loading="eager" src="${g(id,900)}" alt="Photo shot and edited by Pradeeb" onerror="this.closest('.it').remove()"></button>`;
 const videoTile=(t,id,h)=>{const ar=t==="s"?.5625:t==="y"?1.778:0;
-  return `<button class="it" style="--h:${h};${ar?`--ar:${ar};`:""}" ${ar?"":"data-ar "}data-m="${t}" data-id="${id}" aria-label="Play video"><img loading="eager" src="${t==="d"?g(id,700):yt(id)}" alt="" onerror="this.closest('.it').remove()">${ico("play")}</button>`};
-const HL=rng(8);
-$("#lensLoop").innerHTML=loopRow([...PHOTOS,...PHOTOS].map(id=>photoTile(id,Math.round(240+HL()*100))),false,80);
+  const img=t==="d"?im(id,700,"","it",1):`<img loading="eager" decoding="async" src="${yt(id)}" alt="" data-on="it">`;
+  return `<button class="it" style="--h:${h};${ar?`--ar:${ar};`:""}" ${ar?"":"data-ar "}data-m="${t}" data-id="${id}" aria-label="Play video">${img}${ico("play")}</button>`};
 const HM=rng(17),half=Math.ceil(MORE.length/2);
 $("#moreLoops").innerHTML=[MORE.slice(0,half),MORE.slice(half)].map((arr,k)=>loopRow(arr.map(([t,id])=>videoTile(t,id,Math.round(170+HM()*80)+"px")),!!k,k?110:95)).join("");
 
@@ -427,7 +481,7 @@ addEventListener("scroll",()=>{const m=document.documentElement.scrollHeight-inn
   requestAnimationFrame(draw)})();
 
 /* editing timeline dock: playhead + timecode follow the scroll */
-const dt=$("#dt"),ph=$("#ph"),clips=[...document.querySelectorAll("#cr a")],secs=["#hero","#about","#top","#top2","#posters","#lens","#more","#hi"].map($);
+const dt=$("#dt"),ph=$("#ph"),clips=[...document.querySelectorAll("#cr a")],secs=["#hero","#about","#top","#top2","#lens","#posters","#more","#hi"].map($);
 const tc=f=>{const t=Math.floor(f/24);return[Math.floor(t/3600)%100,Math.floor(t/60)%60,t%60,f%24].map(pad).join(":")};
 function lay(){secs.forEach((x,i)=>clips[i].style.flexGrow=x.offsetHeight)}
 function upd(){const m=document.documentElement.scrollHeight-innerHeight,p=m>0?scrollY/m:0;
